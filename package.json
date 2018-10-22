@@ -1,6 +1,6 @@
 {
   "name": "dwitter-wasm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "bin": "./bin/dwitter-wasm",
   "license": "MIT"
 }
