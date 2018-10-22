@@ -48,7 +48,7 @@ function binaryDataToJsString(data) {
 
 function wasmBinaryDataToJsCode(data) {
   var code =
-    't?1:m=new WebAssembly.Instance(new WebAssembly.Module(Uint8Array.from(';
+    't?1:w=WebAssembly,m=new w.Instance(new w.Module(Uint8Array.from(';
   code += binaryDataToJsString(data);
   code += ',c=>c.charCodeAt(0)))).exports';
   return code;

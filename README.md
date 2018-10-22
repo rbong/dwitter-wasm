@@ -17,9 +17,9 @@ This should allow for fast performing Dweets, assuming you can fit something int
 
 ## Dweet Limitations
 
-The current version uses a minimum of 102 Dweet characters out of 140.
+The current version uses a minimum of 103 Dweet characters out of 140.
 Characters are compressed down to Unicode characters, which allows for double the characters in Dweets.
-This leaves you with 76 Javascript characters and WebAssembly binary characters.
+This leaves you with 74 Javascript characters and WebAssembly binary characters.
 
 To get the character count as low as possible, browser compatibility has been sacrificed.
 The use of WebAssembly also comes with browser limitations.
