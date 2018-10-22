@@ -1,0 +1,182 @@
+#!/usr/bin/env node
+
+'use strict';
+
+// Imports
+
+var fs = require('fs');
+
+// Shared values
+
+var version = '1.0.0';
+var usage = 'Usage: dwitter-wasm -w input.wasm -j input.js -o output.js';
+
+// Utilities
+
+function readWasmBinaryFile(path) {
+  return fs.readFileSync(path, 'utf-8');
+}
+
+function readJsSourceFile(path) {
+  return fs.readFileSync(path, 'utf-8');
+}
+
+// This function takes in raw binary data (ex: wasm data)
+// It returns a valid Javascript string
+// The string will have valid ASCII characters
+// This is the shortest way to encode binaries
+function binaryDataToJsString(data) {
+  // Unsafe strings
+  var jsStringEscapeSequences = {
+    ['\0']: '\\0',
+    ['`']: '\\`',
+    ['\r']: '\\r'
+  };
+
+  var string = '';
+
+  data.split('').forEach(function appendToString(byte) {
+    var byteString = byte;
+    if (jsStringEscapeSequences.hasOwnProperty(byte)) {
+      byteString = jsStringEscapeSequences[byte];
+    }
+    string += byteString;
+  });
+
+  return '`' + string + '`';
+}
+
+function wasmBinaryDataToJsCode(data) {
+  var code =
+    't?1:m=new WebAssembly.Instance(new WebAssembly.Module(Uint8Array.from(';
+  code += binaryDataToJsString(data);
+  code += ',c=>c.charCodeAt(0)))).exports';
+  return code;
+}
+
+// This is a compression method for Javascript code
+// It takes advantage of the fact that Dwitter counts Unicde characters as 1 character
+// This is a common method lifted from other Dweets
+function jsCodeToUnicodeJsString(code) {
+  var string = '';
+  // The length must be divisible by 2 so we can use double width chars
+  var paddedCode = code.length % 2 ? ' ' + code : code;
+
+  // Convert the ASCII code into escaped Unicode characters
+  // Ex: 'ab' > [0x61, 0x62] > '%u6162'
+  paddedCode.split('').forEach(function parseChar(char, i) {
+    // Start a new Unicode character every 2 characters
+    if (i % 2 === 0) {
+      string += '%u';
+    }
+
+    // Convert the character into a hex keycode, padded
+    var encodedChar = char.charCodeAt(0).toString(16).padStart(2, '0');
+    // Protect against Unicde characters, which throws off the algorithm
+    if (encodedChar.length !== 2) {
+      console.info(encodedChar);
+      throw new Error(
+        'Invalid ASCII character code at position '
+        + i
+        + ' of length '
+        + encodedChar.length
+        + ' (expected length of 2)'
+      );
+    }
+
+    string += encodedChar;
+  });
+
+  // Turn the escaped Unicode characters into real Unicode
+  string = unescape(string);
+
+  return '`' + string + '`';
+}
+
+function compressJsCode(code) {
+  var compressedCode = 'eval(unescape(escape';
+  compressedCode += jsCodeToUnicodeJsString(code);
+  compressedCode += '.replace(/u(..)/g,"$1%")))';
+  return compressedCode;
+}
+
+function parseArgs(argv) {
+  var opts = {
+    wasmInputPath: undefined,
+    jsInputPath: undefined,
+    outputPath: undefined
+  };
+
+  // Handle early exit cases
+
+  if (argv.indexOf('--help') !== -1) {
+    console.log(usage);
+    process.exit(0);
+  }
+
+  if (argv.indexOf('--version') !== -1) {
+    console.log(version);
+    process.exit(0);
+  }
+
+  // Parse ordinary arguments
+
+  for (var i = 2; i < argv.length; i++) {
+    var opt = argv[i];
+    var value = argv[i + 1];
+
+    switch (opt) {
+      case '-w': case '--wasm-input':
+        opts.wasmInputPath = value;
+        i++;
+        break;
+      case '-j': case '--js-input':
+        opts.jsInputPath = value;
+        i++;
+        break;
+      case '-o': case '--output':
+        opts.outputPath = value;
+        i++;
+        break;
+      default:
+        console.error('Unrecognized argument: ' + opt);
+        console.error(usage);
+        process.exit(1);
+    }
+  }
+
+  // Validate and return arguments
+
+  if (!opts.wasmInputPath) {
+    console.error('No .wasm input file was given');
+    console.error(usage);
+    process.exit(1);
+  }
+
+  if (!opts.jsInputPath) {
+    console.error('No Javascript input file was given');
+    console.error(usage);
+    process.exit(1);
+  }
+
+  if (!opts.outputPath) {
+    console.error('No output file was given');
+    console.error(usage);
+    process.exit(1);
+  }
+
+  return opts;
+}
+
+// Main code
+
+const opts = parseArgs(process.argv);
+
+var binaryData = readWasmBinaryFile(opts.wasmInputPath);
+
+var jsCode = wasmBinaryDataToJsCode(binaryData);
+jsCode += ';';
+jsCode += readJsSourceFile(opts.jsInputPath);
+jsCode = compressJsCode(jsCode);
+
+fs.writeFileSync(opts.outputPath, jsCode);
