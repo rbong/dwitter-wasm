@@ -14,11 +14,11 @@ var usage = 'Usage: dwitter-wasm -w input.wasm -j input.js -o output.js';
 // Utilities
 
 function readWasmBinaryFile(path) {
-  return fs.readFileSync(path, 'utf-8');
+  return fs.readFileSync(path, 'binary');
 }
 
 function readJsSourceFile(path) {
-  return fs.readFileSync(path, 'utf-8');
+  return fs.readFileSync(path, 'binary');
 }
 
 // This function takes in raw binary data (ex: wasm data)
