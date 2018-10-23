@@ -50,7 +50,7 @@ function wasmBinaryDataToJsCode(data) {
   var code =
     't?1:w=WebAssembly,m=new w.Instance(new w.Module(Uint8Array.from(';
   code += binaryDataToJsString(data);
-  code += ',c=>c.charCodeAt(0)))).exports';
+  code += ',c=>c.charCodeAt()))).exports';
   return code;
 }
 
