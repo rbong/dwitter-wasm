@@ -8,7 +8,7 @@ var fs = require('fs');
 
 // Shared values
 
-var version = '1.0.2';
+var version = '1.0.3';
 var usage = 'Usage: dwitter-wasm [--encode-wasm] [--compress] -w input.wasm -j input.js -o output.js';
 var wasmBinaryToken = '`WASM_BINARY`';
 
