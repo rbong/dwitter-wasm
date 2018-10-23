@@ -9,7 +9,8 @@ var fs = require('fs');
 // Shared values
 
 var version = '1.0.2';
-var usage = 'Usage: dwitter-wasm -w input.wasm -j input.js -o output.js';
+var usage = 'Usage: dwitter-wasm [--encode-wasm] [--compress] -w input.wasm -j input.js -o output.js';
+var wasmBinaryToken = '`WASM_BINARY`';
 
 // Utilities
 
@@ -46,12 +47,18 @@ function binaryDataToJsString(data) {
   return '`' + string + '`';
 }
 
+function fillDefaultTemplate(wasmBinaryString) {
+  return 't?1:w=WebAssembly,m=new w.Instance(new w.Module(Uint8Array.from(' +
+    wasmBinaryString +
+    ',c=>c.charCodeAt()))).exports';
+}
+
+function generateDefaultTemplate() {
+  return fillDefaultTemplate(wasmBinaryToken);
+}
+
 function wasmBinaryDataToJsCode(data) {
-  var code =
-    't?1:w=WebAssembly,m=new w.Instance(new w.Module(Uint8Array.from(';
-  code += binaryDataToJsString(data);
-  code += ',c=>c.charCodeAt()))).exports';
-  return code;
+  return fillDefaultTemplate(binaryDataToJsString(data));
 }
 
 // This is a compression method for Javascript code
@@ -93,6 +100,14 @@ function jsCodeToUnicodeJsString(code) {
   return '`' + string + '`';
 }
 
+function combineInputs(wasmInput, jsInput) {
+  if (jsInput.match(wasmBinaryToken)) {
+    return jsInput.replace(wasmBinaryToken, binaryDataToJsString(wasmInput));
+  } else {
+    return wasmBinaryDataToJsCode(wasmInput) + ';' + jsInput;
+  }
+}
+
 function compressJsCode(code) {
   var compressedCode = 'eval(unescape(escape';
   compressedCode += jsCodeToUnicodeJsString(code);
@@ -104,7 +119,9 @@ function parseArgs(argv) {
   var opts = {
     wasmInputPath: undefined,
     jsInputPath: undefined,
-    outputPath: undefined
+    outputPath: undefined,
+    compressMode: undefined,
+    encodeWasmMode: undefined
   };
 
   // Handle early exit cases
@@ -116,6 +133,11 @@ function parseArgs(argv) {
 
   if (argv.indexOf('--version') !== -1) {
     console.log(version);
+    process.exit(0);
+  }
+
+  if (argv.indexOf('--template') !== -1) {
+    console.log(generateDefaultTemplate());
     process.exit(0);
   }
 
@@ -138,6 +160,12 @@ function parseArgs(argv) {
         opts.outputPath = value;
         i++;
         break;
+      case '--encode-wasm':
+        opts.encodeWasmMode = true;
+        break;
+      case '--compress':
+        opts.compressMode = true;
+        break;
       default:
         console.error('Unrecognized argument: ' + opt);
         console.error(usage);
@@ -145,22 +173,28 @@ function parseArgs(argv) {
     }
   }
 
+  // Calculate defaults
+
+  if (opts.encodeWasmMode === undefined && opts.compressMode === undefined) {
+    opts.encodeWasmMode = opts.compressMode = true;
+  }
+
   // Validate and return arguments
 
-  if (!opts.wasmInputPath) {
-    console.error('No .wasm input file was given');
+  if (!opts.wasmInputPath && opts.encodeWasmMode) {
+    console.error('--wasm-input is required --encode-wasm is enabled');
     console.error(usage);
     process.exit(1);
   }
 
   if (!opts.jsInputPath) {
-    console.error('No Javascript input file was given');
+    console.error('--js-input is required');
     console.error(usage);
     process.exit(1);
   }
 
   if (!opts.outputPath) {
-    console.error('No output file was given');
+    console.error('--output is required');
     console.error(usage);
     process.exit(1);
   }
@@ -172,11 +206,18 @@ function parseArgs(argv) {
 
 const opts = parseArgs(process.argv);
 
-var binaryData = readWasmBinaryFile(opts.wasmInputPath);
+var jsCode = '';
+var jsInput = readJsSourceFile(opts.jsInputPath);
 
-var jsCode = wasmBinaryDataToJsCode(binaryData);
-jsCode += ';';
-jsCode += readJsSourceFile(opts.jsInputPath);
-jsCode = compressJsCode(jsCode);
+if (opts.encodeWasmMode) {
+  var wasmInput = readWasmBinaryFile(opts.wasmInputPath);
+  jsCode = combineInputs(wasmInput, jsInput);
+} else {
+  jsCode = jsInput;
+}
+
+if (opts.compressMode) {
+  jsCode = compressJsCode(jsCode);
+}
 
 fs.writeFileSync(opts.outputPath, jsCode);

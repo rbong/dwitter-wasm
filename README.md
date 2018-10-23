@@ -38,12 +38,19 @@ $ npm install --global dwitter-wasm
 
 ## Usage
 
+**Basics**
+
 To begin, create a `.wasm` source file using your tools of choice.
 This binary file will be used to create a [WebAssembly.Instance](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance) in the final output.
 
 You must then create a `.js` source file, which should contain any additional Javascript code for the Dweet.
 The `WebAssembly.Instance` `exports` created out of the provided `.wasm` file will be available through the Javascript variable `m`.
 The Javascript code cannot currently contain Unicode characters.
+
+By default, the Javascript source file will be appended onto the end of the generated code which loads the WebAssembly binary separated by a semicolon.
+However, if you include the string `\`WASM_INPUT\`` in the Javascript source file, the encoded WebAssembly binary will be injected instead.
+This method of combining the source files can be used if you would like to pass imports to the WebAssembly module or make other customizations to the WebAssembly binary loading code.
+An example template with the loader code size optimizations can be generated with `dwitter-wasm --template`.
 
 You must also specify an output path for the location where the final Dweet code will be contained.
 Since the Dweet uses specially encoded characters, you must copy the code into Dwitter using a program that supports Unicode.
@@ -60,6 +67,19 @@ $ xclip output.js -sel clip
 
 Using this example, the Dwitter code will be copied to your clipboard for pasting to Dwitter.
 The Dweet will do nothing but print `m` to your console.
+
+**Command Line Arguments**
+
+- `-w|--wasm-input`: The `.wasm` file to encode and embed in Javascript code
+- `-j|--js-input`: The `.js` file to append to the generated Javascript code
+- `--encode-wasm`: Only perform the step where the `.wasm` is encoded and embedded and combined with Javascript.
+                   By default, all steps are all enabled.
+- `--compress`: Only perform the step where the code is compressed, using `--js-input`.
+                By default, all steps are all enabled.
+- `-o|--output`: The resulting `.js` file
+- `--template`: Output an optimized template for input and exit
+- `--version`: Output the version number and exit
+- `--help`: Output a help string and exit
 
 ## How it Works
 
