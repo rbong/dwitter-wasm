@@ -8,7 +8,7 @@ var fs = require('fs');
 
 // Shared values
 
-var version = '1.0.1';
+var version = '1.0.2';
 var usage = 'Usage: dwitter-wasm -w input.wasm -j input.js -o output.js';
 
 // Utilities
