@@ -48,7 +48,7 @@ The `WebAssembly.Instance` `exports` created out of the provided `.wasm` file wi
 The Javascript code cannot currently contain Unicode characters.
 
 By default, the Javascript source file will be appended onto the end of the generated code which loads the WebAssembly binary separated by a semicolon.
-However, if you include the string `\`WASM_INPUT\`` in the Javascript source file, the encoded WebAssembly binary will be injected instead.
+However, if you include the string \`WASM_INPUT\` in the Javascript source file, the encoded WebAssembly binary will be injected instead.
 This method of combining the source files can be used if you would like to pass imports to the WebAssembly module or make other customizations to the WebAssembly binary loading code.
 An example template with the loader code size optimizations can be generated with `dwitter-wasm --template`.
 
